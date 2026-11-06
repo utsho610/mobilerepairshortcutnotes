@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>মোবাইল রিপেয়ার ডায়নামিক নোটবুক</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; }
+        h2 { text-align: center; color: #333; margin-bottom: 20px; }
+        
+        /* ফরম ডিজাইন */
+        .card-form { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        
+        .btn { background: #28a745; color: white; border: none; padding: 10px 15px; font-size: 15px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn:hover { background: #218838; }
+
+        /* সার্চ বক্স */
+        .search-box { width: 100%; padding: 12px; border: 1px solid #007bff; border-radius: 6px; font-size: 15px; margin-bottom: 15px; }
+
+        /* নোট লিস্ট */
+        .note-card { background: white; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); overflow: hidden; }
+        .note-header { background: #007bff; color: white; padding: 14px; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .note-header:hover { background: #0056b3; }
+        
+        .note-body { display: none; padding: 15px; background: #fafafa; text-align: center; border-top: 1px solid #ddd; }
+        .note-body p { text-align: left; color: #444; margin-top: 0; font-size: 14px; }
+        .note-body img { max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #ccc; margin-top: 10px; }
+        
+        .delete-btn { background: #dc3545; color: white; border: none; padding: 5px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; margin-top: 10px; float: right; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📱 মোবাইল সার্ভিসিং ডায়নামিক নোটবুক</h2>
+
+    <!-- নতুন নোট ইনপুট দেওয়ার ফর্ম -->
+    <div class="card-form">
+        <h3>➕ নতুন সলিউশন যোগ করুন</h3>
+        <div class="form-group">
+            <label>ক্যাপশন / মডেল ও সমস্যা:</label>
+            <input type="text" id="captionInput" placeholder="যেমন: Samsung A21s WiFi Problem Jumper">
+        </div>
+        <div class="form-group">
+            <label>গুগল ড্রাইভ ছবির লিংক (Google Drive Share Link):</label>
+            <input type="text" id="driveUrlInput" placeholder="https://drive.google.com/file/d/.../view?usp=sharing">
+        </div>
+        <div class="form-group">
+            <label>নোট / বিবরণ (ঐচ্ছিক):</label>
+            <textarea id="detailsInput" rows="2" placeholder="কাজের কোন বিষয় মনে রাখতে চাইলে লিখুন..."></textarea>
+        </div>
+        <button class="btn" onclick="addNote()">সেভ করুন</button>
+    </div>
+
+    <!-- নোট সার্চ বার -->
+    <input type="text" id="searchInput" class="search-box" onkeyup="filterNotes()" placeholder="🔍 যেকোনো মডেল বা প্রবলেম লিখে সার্চ করুন...">
+
+    <!-- যেখানে সব নোট জমা হয়ে দেখাবে -->
+    <div id="notesContainer"></div>
+</div>
+
+<script>
+    // অ্যাপ ওপেন হলে লোকাল মেমরি থেকে ডাটা লোড হবে
+    document.addEventListener("DOMContentLoaded", displayNotes);
+
+    function convertDriveUrl(url) {
+        // ড্রাইভের শেয়ার লিংক থেকে ডাইরেক্ট ইমেজ লিংক তৈরি করার সহজ কোড
+        var match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            return "https://lh3.googleusercontent.com/d/" + match[1];
+        }
+        return url; // সাধারণ অনলাইন ইমেজ লিংক হলে সেটাই রিটার্ন করবে
+    }
+
+    function addNote() {
+        var caption = document.getElementById("captionInput").value.trim();
+        var rawUrl = document.getElementById("driveUrlInput").value.trim();
+        var details = document.getElementById("detailsInput").value.trim();
+
+        if (!caption || !rawUrl) {
+            alert("দয়া করে ক্যাপশন এবং ড্রাইভের ছবির লিংকটি দিন!");
+            return;
+        }
+
+        var imageUrl = convertDriveUrl(rawUrl);
+
+        var note = {
+            id: Date.now(),
+            caption: caption,
+            imageUrl: imageUrl,
+            details: details
+        };
+
+        var notes = JSON.parse(localStorage.getItem("mobile_repair_notes")) || [];
+        notes.unshift(note); // নতুন নোট সবার উপরে দেখাবে
+        localStorage.setItem("mobile_repair_notes", JSON.stringify(notes));
+
+        // ফর্ম খালি করা
+        document.getElementById("captionInput").value = "";
+        document.getElementById("driveUrlInput").value = "";
+        document.getElementById("detailsInput").value = "";
+
+        displayNotes();
+    }
+
+    function displayNotes() {
+        var notesContainer = document.getElementById("notesContainer");
+        notesContainer.innerHTML = "";
+        var notes = JSON.parse(localStorage.getItem("mobile_repair_notes")) || [];
+
+        if (notes.length === 0) {
+            notesContainer.innerHTML = "<p style='text-align:center; color:#777;'>এখনো কোনো নোট যোগ করা হয়নি।</p>";
+            return;
+        }
+
+        notes.forEach(function(note) {
+            var card = document.createElement("div");
+            card.className = "note-card";
+            card.innerHTML = `
+                <div class="note-header" onclick="toggleNote(${note.id})">
+                    <span>📌 ${note.caption}</span>
+                    <span>▼</span>
+                </div>
+                <div id="content-${note.id}" class="note-body">
+                    ${note.details ? `<p><strong>নোট:</strong> ${note.details}</p>` : ''}
+                    <img src="${note.imageUrl}" alt="Jumper Solution" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/400x250?text=Image+Link+Error';">
+                    <br>
+                    <button class="delete-btn" onclick="deleteNote(${note.id})">ডিলিট করুন</button>
+                    <div style="clear:both;"></div>
+                </div>
+            `;
+            notesContainer.appendChild(card);
+        });
+    }
+
+    function toggleNote(id) {
+        var el = document.getElementById("content-" + id);
+        if (el.style.display === "block") {
+            el.style.display = "none";
+        } else {
+            el.style.display = "block";
+        }
+    }
+
+    function deleteNote(id) {
+        if (confirm("আপনি কি নিশ্চিত এই নোটটি মুছে ফেলতে চান?")) {
+            var notes = JSON.parse(localStorage.getItem("mobile_repair_notes")) || [];
+            notes = notes.filter(n => n.id !== id);
+            localStorage.setItem("mobile_repair_notes", JSON.stringify(notes));
+            displayNotes();
+        }
+    }
+
+    function filterNotes() {
+        var query = document.getElementById("searchInput").value.toLowerCase();
+        var cards = document.getElementsByClassName("note-card");
+
+        for (var i = 0; i < cards.length; i++) {
+            var text = cards[i].innerText.toLowerCase();
+            if (text.includes(query)) {
+                cards[i].style.display = "";
+            } else {
+                cards[i].style.display = "none";
+            }
+        }
+    }
+</script>
+
+</body>
+</html>
